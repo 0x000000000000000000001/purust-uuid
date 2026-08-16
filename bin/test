@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+set -e
+cd "$(dirname "$0")/.."
+
+CLEAN=0
+for arg in "$@"; do
+  if [ "$arg" == "-c" ] || [ "$arg" == "--clean" ]; then
+    CLEAN=1
+  fi
+done
+
+if [ "$CLEAN" == "1" ]; then
+  COMPILER_DIR="../purust"
+  echo "=== Recompiling ${COMPILER_DIR} ==="
+  (cd "${COMPILER_DIR}" && cargo build) || { echo "Compiler build failed"; exit 1; }
+fi
+
+rm -rf output
+rm -rf rust_output
+mkdir -p rust_output
+
+echo "=== Building project with spago ==="
+spago build || { echo "Spago build failed"; exit 1; }
+
+echo "=== Generating Rust code with purust ==="
+../purust/target/debug/purust --main Test.Main || exit 1
+
+echo "=== Running Rust test script ==="
+cd rust_output
+cargo run
+echo -e "\n✅ Tests passed successfully!"
