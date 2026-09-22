@@ -12,7 +12,25 @@ done
 if [ "$CLEAN" == "1" ]; then
   COMPILER_DIR="../purust"
   echo "=== Recompiling ${COMPILER_DIR} ==="
-  (cd "${COMPILER_DIR}" && cargo build) || { echo "Compiler build failed"; exit 1; }
+  SPAGO_BIN="$(cd "${COMPILER_DIR}" && pwd)/node_modules/.bin/spago"
+  if [ -n "${PURS:-}" ]; then
+    FORK_PURS="$(command -v "$PURS")"
+  else
+    FORK_BUILDS=("$(cd "${COMPILER_DIR}/.." && pwd)"/purescript/.stack-work/dist/*/*/build/purs/purs)
+    if [ "${#FORK_BUILDS[@]}" -eq 1 ] && [ -x "${FORK_BUILDS[0]}" ]; then
+      FORK_PURS="${FORK_BUILDS[0]}"
+    else
+      FORK_PURS="$(command -v purs)"
+    fi
+  fi
+  # Run Spago directly with the TAST-enabled compiler first on PATH. `npm run
+  # build` would inject ancestor `node_modules/.bin` directories, and an old
+  # PureScript at the workspace root (or the missing local fork download)
+  # would otherwise win.
+  export PATH="$(dirname "$FORK_PURS"):$(dirname "$SPAGO_BIN"):$PATH"
+  (cd "${COMPILER_DIR}" && "$SPAGO_BIN" build \
+    && "$SPAGO_BIN" bundle --module Main --platform node --outfile bin/purust.js --bundle-type app) \
+    || { echo "Compiler build failed"; exit 1; }
 fi
 
 rm -rf output
