@@ -9,3 +9,5 @@ output.bak/
 .psc-ide-port
 /.spago/
 .purs-repl
+.purmeta/
+.DS_Store
